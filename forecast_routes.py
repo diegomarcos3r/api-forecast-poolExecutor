@@ -1,40 +1,30 @@
-from fastapi import APIRouter
+import asyncio
+from fastapi import APIRouter, Request
 from models.models import CreateSimulation
-from typing import Dict
 from services.forecast import Forecast
 
-
-# instanciar classe para criação da API
 
 forecast_router = APIRouter(prefix="/forecast", tags=["forecast"])
 
 
-# Endpoints
-
-@forecast_router.post("/create-simulation")
-async def create_simulation(new_simulation: CreateSimulation) -> dict:
-
+@forecast_router.post("/run-forecast")
+async def create_simulation(request: Request, new_simulation: CreateSimulation) -> dict:
+    
     forecast = Forecast(
-        nr_simulations = new_simulation.nr_simulations,
-        backlog_min = new_simulation.backlog_min,
-        backlog_max = new_simulation.backlog_max,
-        throughput = new_simulation.throughput
+        nr_simulations=new_simulation.nr_simulations,
+        backlog_min=new_simulation.backlog_min,
+        backlog_max=new_simulation.backlog_max,
+        throughput=new_simulation.throughput
     )
 
-    # Rodar simulação
+    # Usar o pool executor do app.state
+    loop = asyncio.get_running_loop()
+    pool_executor = request.app.state.pool_executor
+    result = await loop.run_in_executor(pool_executor, forecast.run_forecast)
 
-    forecast_weeks = forecast.run_simulation()
+    return result
 
-    # Gerar percentis
 
-    percentiles = forecast.calculate_percentiles(forecast_weeks,[50,75,85,95])
-    
-    # Gerar resposta
-    response = forecast.format_forecast_response(
-        p50=percentiles[50],
-        p75=percentiles[75],
-        p85=percentiles[85],
-        p95=percentiles[95]
-        )
-
-    return response
+@forecast_router.get("/")
+async def health_check() -> dict:
+    return {"status": "API de Forecast rodando"}
