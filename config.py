@@ -7,7 +7,7 @@ from fastapi import FastAPI
 async def lifespan(app: FastAPI):
     """Context manager para gerenciar o ciclo de vida do ProcessPoolExecutor"""
     # Startup
-    with ProcessPoolExecutor(max_workers=6) as pool:
+    with ProcessPoolExecutor() as pool:
         app.state.pool_executor = pool
         print("✓ ProcessPoolExecutor inicializado")
         yield
